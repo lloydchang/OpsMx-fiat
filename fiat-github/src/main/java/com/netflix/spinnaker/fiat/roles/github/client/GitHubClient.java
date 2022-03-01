@@ -34,10 +34,17 @@ public interface GitHubClient {
   List<Member> getOrgMembers(
       @Path("org") String org, @Query("page") int page, @Query("per_page") int paginationValue);
 
+<<<<<<< HEAD
   @GET("/orgs/{org}/teams/{teamSlug}/members")
   List<Member> getMembersOfTeam(
       @Path("org") String org,
       @Path("teamSlug") String teamSlug,
+=======
+  @GET("/orgs/{org}/teams/{idTeam}/members")
+  List<Member> getMembersOfTeam(
+      @Path("org") String org,
+      @Path("idTeam") Long idTeam,
+>>>>>>> 84ae3a3 (fix(github): Use new github teams api as old one is deprecated (#907) (#909))
       @Query("page") int page,
       @Query("per_page") int paginationValue);
 }
