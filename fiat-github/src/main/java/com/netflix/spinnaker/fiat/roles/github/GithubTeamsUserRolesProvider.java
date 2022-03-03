@@ -297,13 +297,13 @@ public class GithubTeamsUserRolesProvider implements UserRolesProvider, Initiali
     return members;
   }
 
-  private List<Member> getMembersInTeamPaginated(String organization, Long teamId, int page) {
+  private List<Member> getMembersInTeamPaginated(String organization, String teamSlug, int page) {
     List<Member> members = new ArrayList<>();
     try {
-      log.debug("Requesting page " + page + " of members team " + teamId + ".");
+      log.debug("Requesting page " + page + " of members team " + teamSlug + ".");
       members =
           gitHubClient.getMembersOfTeam(
-              organization, teamId, page, gitHubProperties.paginationValue);
+              organization, teamSlug, page, gitHubProperties.paginationValue);
     } catch (RetrofitError e) {
       if (e.getResponse().getStatus() != 404) {
         handleNon404s(e);
