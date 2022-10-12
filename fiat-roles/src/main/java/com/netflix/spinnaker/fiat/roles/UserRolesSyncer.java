@@ -166,7 +166,6 @@ public class UserRolesSyncer {
         if (!(temp = getServiceAccountsAsMap(roles)).isEmpty()) {
           combo.putAll(temp);
         }
-
         return updateUserPermissions(combo);
       } catch (ProviderException | PermissionResolutionException ex) {
         registry
@@ -267,6 +266,7 @@ public class UserRolesSyncer {
               permissionsRepository.putAllById(values);
               return values.size();
             });
+    log.info("Synced non-anonymous user roles: " + count);
     log.info("Synced {} non-anonymous user roles.", count);
     return count;
   }
