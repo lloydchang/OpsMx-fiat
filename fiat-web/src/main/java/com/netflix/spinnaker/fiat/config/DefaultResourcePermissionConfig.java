@@ -106,7 +106,9 @@ class DefaultResourcePermissionConfig {
   }
 
   @Bean
-  @ConditionalOnProperty("auth.permissions.source.pipeline.prefix.enabled")
+  @ConditionalOnProperty(
+      value = "auth.permissions.source.pipeline.prefix.enabled",
+      matchIfMissing = true)
   @ConfigurationProperties("auth.permissions.source.pipeline.prefix")
   ResourcePermissionSource<Pipeline> pipelinePrefixResourcePermissionSource() {
     return new ResourcePrefixPermissionSource<Pipeline>();
