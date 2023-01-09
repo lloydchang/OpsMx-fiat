@@ -496,7 +496,8 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
                         .map(a -> new Account().setName(a))
                         .collect(Collectors.toSet())))
         .setLegacyFallback(true)
-        .setAllowAccessToUnknownApplications(true);
+        .setAllowAccessToUnknownApplications(true)
+        .setAllowAccessToUnknownPipelines(true);
   }
 
   private String getAccountsForView(UserPermission.View view) {
