@@ -139,12 +139,10 @@ public class FiatConfig extends WebMvcConfigurerAdapter {
   }
 
   @Bean
-  @ConditionalOnProperty(value = "auth.permissions.source.pipeline.prefix.enabled")
   DefaultPipelineResourceProvider pipelineProvider(
       Front50Service front50Service,
       ResourcePermissionProvider<Pipeline> permissionProvider,
       FallbackPermissionsResolver executeFallbackPermissionsResolver) {
-
     return new DefaultPipelineResourceProvider(
         front50Service, permissionProvider, executeFallbackPermissionsResolver);
   }
