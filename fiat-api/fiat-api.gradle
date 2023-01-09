@@ -57,11 +57,6 @@ publishing {
 
   repositories {
     maven {
-      credentials {
-        username = "admin"
-        password = "Opsmx@321"
-      }
-
       url = "https://nexus.opsmx.net/repository/maven-snapshots"
     }
   }
