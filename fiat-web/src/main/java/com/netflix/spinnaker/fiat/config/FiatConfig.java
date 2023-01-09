@@ -94,7 +94,8 @@ public class FiatConfig extends WebMvcConfigurerAdapter {
 
   @Bean
   @ConditionalOnProperty(
-      value = "fiat.service-account-resource-provider.default.enabled",
+      prefix = "fiat.service-account-resource-provider.default",
+      name = "enabled",
       matchIfMissing = true)
   DefaultServiceAccountResourceProvider serviceAccountResourceProvider(
       Front50Service front50Service,
@@ -136,8 +137,6 @@ public class FiatConfig extends WebMvcConfigurerAdapter {
     return scheduler;
   }
 
-  @Bean
-  @ConditionalOnProperty(value = "auth.permissions.source.pipeline.prefix.enabled")
   DefaultPipelineResourceProvider pipelineProvider(
       Front50Service front50Service,
       ResourcePermissionProvider<Pipeline> permissionProvider,
