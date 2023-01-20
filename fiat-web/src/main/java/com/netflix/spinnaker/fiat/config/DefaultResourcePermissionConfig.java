@@ -107,9 +107,9 @@ class DefaultResourcePermissionConfig {
 
   @Bean
   @ConditionalOnProperty(
-      prefix = "fiat.service-account-resource-provider.default",
-      name = "enabled",
-      matchIfMissing = true)
+      value = "auth.permissions.source.pipeline.prefix.enabled",
+      havingValue = "true",
+      matchIfMissing = false)
   @ConfigurationProperties("auth.permissions.source.pipeline.prefix")
   ResourcePermissionSource<Pipeline> pipelinePrefixResourcePermissionSource() {
     return new ResourcePrefixPermissionSource<Pipeline>();
