@@ -345,7 +345,8 @@ public class AuthorizeController {
     return getUserPermissionOrDefault(userId)
         .orElseThrow(userNotFound(userId))
         .getView()
-        .setAllowAccessToUnknownApplications(configProps.isAllowAccessToUnknownApplications());
+        .setAllowAccessToUnknownApplications(configProps.isAllowAccessToUnknownApplications())
+        .setAllowAccessToUnknownPipelines(configProps.isAllowAccessToUnknownPipelines());
   }
 
   private Supplier<NotFoundException> userNotFound(String userId) {

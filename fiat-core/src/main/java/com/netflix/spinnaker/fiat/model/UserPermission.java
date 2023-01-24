@@ -24,8 +24,10 @@ import java.util.stream.Collectors;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
+@Slf4j
 @Data
 public class UserPermission {
   private String id;
@@ -141,6 +143,7 @@ public class UserPermission {
 
       this.accounts = (Set<Account.View>) toViews.apply(permission.getAccounts());
       this.applications = (Set<Application.View>) toViews.apply(permission.getApplications());
+      log.info("UserPermission class :: pipelines count : {}", permission.getPipelines());
       this.pipelines = (Set<Pipeline.View>) toViews.apply(permission.getPipelines());
       this.serviceAccounts =
           (Set<ServiceAccount.View>) toViews.apply(permission.getServiceAccounts());
