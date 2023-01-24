@@ -94,7 +94,8 @@ public class FiatConfig extends WebMvcConfigurerAdapter {
 
   @Bean
   @ConditionalOnProperty(
-      value = "fiat.service-account-resource-provider.default.enabled",
+      prefix = "fiat.service-account-resource-provider.default",
+      name = "enabled",
       matchIfMissing = true)
   DefaultServiceAccountResourceProvider serviceAccountResourceProvider(
       Front50Service front50Service,
