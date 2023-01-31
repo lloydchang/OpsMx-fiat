@@ -203,8 +203,7 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     return userToRoles;
   }
 
-  @Override
-  public Map<String, UserPermission> resolveResources(
+  private Map<String, UserPermission> resolveResources(
       @NonNull Map<String, Collection<Role>> userToRoles) {
     return userToRoles.entrySet().stream()
         .map(
