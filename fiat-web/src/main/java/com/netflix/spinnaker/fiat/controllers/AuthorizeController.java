@@ -130,6 +130,11 @@ public class AuthorizeController {
     return new HashSet<>(getUserPermissionView(userId).getApplications());
   }
 
+  @RequestMapping(value = "/{userId:.+}/pipelines", method = RequestMethod.GET)
+  public Set<Pipeline.View> getUserPipelines(@PathVariable String userId) {
+    return new HashSet<>(getUserPermissionView(userId).getPipelines());
+  }
+
   @RequestMapping(
       value = "/{userId:.+}/applications/{applicationName:.+}",
       method = RequestMethod.GET)

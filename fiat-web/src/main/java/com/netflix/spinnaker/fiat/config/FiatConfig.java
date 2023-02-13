@@ -137,11 +137,11 @@ public class FiatConfig extends WebMvcConfigurerAdapter {
     return scheduler;
   }
 
+  @Bean
   DefaultPipelineResourceProvider pipelineProvider(
       Front50Service front50Service,
       ResourcePermissionProvider<Pipeline> permissionProvider,
       FallbackPermissionsResolver executeFallbackPermissionsResolver) {
-
     return new DefaultPipelineResourceProvider(
         front50Service, permissionProvider, executeFallbackPermissionsResolver);
   }
