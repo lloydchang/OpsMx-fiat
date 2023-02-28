@@ -267,10 +267,6 @@ public class UserRolesSyncer {
     return count;
   }
 
-  public long syncServiceAccount(String serviceAccountId, List<String> roles) {
-    return syncStrategy.syncServiceAccount(serviceAccountId, roles);
-  }
-
   private static String metricName(String name) {
     return "fiat.userRoles." + name;
   }
