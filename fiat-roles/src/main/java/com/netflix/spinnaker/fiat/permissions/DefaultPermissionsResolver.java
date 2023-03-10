@@ -18,7 +18,6 @@ package com.netflix.spinnaker.fiat.permissions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.netflix.spinnaker.fiat.config.AccountManagerConfig;
 import com.netflix.spinnaker.fiat.config.FiatAdminConfig;
 import com.netflix.spinnaker.fiat.config.UnrestrictedResourceConfig;
 import com.netflix.spinnaker.fiat.model.UserPermission;
@@ -30,7 +29,6 @@ import com.netflix.spinnaker.fiat.providers.ResourceProvider;
 import com.netflix.spinnaker.fiat.roles.UserRolesProvider;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -53,7 +51,6 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
   private final ResourceProvider<ServiceAccount> serviceAccountProvider;
   private final ImmutableList<ResourceProvider<? extends Resource>> resourceProviders;
   private final FiatAdminConfig fiatAdminConfig;
-  private final AccountManagerConfig accountManagerConfig;
   private final ObjectMapper mapper;
 
   @Autowired
@@ -62,13 +59,11 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
       ResourceProvider<ServiceAccount> serviceAccountProvider,
       List<ResourceProvider<? extends Resource>> resourceProviders,
       FiatAdminConfig fiatAdminConfig,
-      AccountManagerConfig accountManagerConfig,
       @Qualifier("objectMapper") ObjectMapper mapper) {
     this.userRolesProvider = userRolesProvider;
     this.serviceAccountProvider = serviceAccountProvider;
     this.resourceProviders = ImmutableList.copyOf(resourceProviders);
     this.fiatAdminConfig = fiatAdminConfig;
-    this.accountManagerConfig = accountManagerConfig;
     this.mapper = mapper;
   }
 
@@ -108,26 +103,15 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     }
   }
 
-  private boolean hasAdminRole(Set<Role> roles) {
-    Set<String> adminRoles = Set.copyOf(fiatAdminConfig.getAdmin().getRoles());
-    Set<String> userRoles = roles.stream().map(Role::getName).collect(Collectors.toSet());
-    return !Collections.disjoint(adminRoles, userRoles);
-  }
-
-  private boolean hasAccountManagerRole(Set<Role> roles) {
-    Set<String> accountManagerRoles = Set.copyOf(accountManagerConfig.getRoles());
-    Set<String> userRoles = roles.stream().map(Role::getName).collect(Collectors.toSet());
-    return !Collections.disjoint(accountManagerRoles, userRoles);
+  private boolean resolveAdminRole(Set<Role> roles) {
+    List<String> adminRoles = fiatAdminConfig.getAdmin().getRoles();
+    return roles.stream().map(Role::getName).anyMatch(adminRoles::contains);
   }
 
   @SuppressWarnings("unchecked")
   private UserPermission getUserPermission(String userId, Set<Role> roles) {
     UserPermission permission =
-        new UserPermission()
-            .setId(userId)
-            .setRoles(roles)
-            .setAdmin(hasAdminRole(roles))
-            .setAccountManager(hasAccountManagerRole(roles));
+        new UserPermission().setId(userId).setRoles(roles).setAdmin(resolveAdminRole(roles));
 
     for (ResourceProvider provider : resourceProviders) {
       try {
@@ -203,8 +187,7 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     return userToRoles;
   }
 
-  @Override
-  public Map<String, UserPermission> resolveResources(
+  private Map<String, UserPermission> resolveResources(
       @NonNull Map<String, Collection<Role>> userToRoles) {
     return userToRoles.entrySet().stream()
         .map(
@@ -215,9 +198,8 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
               return new UserPermission()
                   .setId(userId)
                   .setRoles(userRoles)
-                  .setAdmin(hasAdminRole(userRoles))
-                  .setAccountManager(hasAccountManagerRole(userRoles))
-                  .addResources(getResources(userId, userRoles, hasAdminRole(userRoles)));
+                  .setAdmin(resolveAdminRole(userRoles))
+                  .addResources(getResources(userId, userRoles, resolveAdminRole(userRoles)));
             })
         .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
   }
