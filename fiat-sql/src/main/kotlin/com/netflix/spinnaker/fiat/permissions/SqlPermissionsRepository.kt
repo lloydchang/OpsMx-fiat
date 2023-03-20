@@ -123,17 +123,11 @@ class SqlPermissionsRepository(
 
     private fun getUserPermissions(id: String, unrestrictedUser: UserPermission?): Optional<UserPermission> {
         // Check if the user exists and if they do are they an admin
-        val isAdmin = withRetry(RetryCategory.READ) {
-            jooq.select(USER.ADMIN)
+        val (isAdmin, isAccountManager) = withRetry(RetryCategory.READ) {
+            jooq.select(USER.ADMIN, USER.ACCOUNT_MANAGER)
                 .from(USER)
                 .where(USER.ID.eq(id))
-                .fetchOne(USER.ADMIN)
-        } ?: return Optional.empty()
-        val isAccountManager = withRetry(RetryCategory.READ) {
-            jooq.select(USER.ACCOUNT_MANAGER)
-                .from(USER)
-                .where(USER.ID.eq(id))
-                .fetchOne(USER.ACCOUNT_MANAGER)
+                .fetchOne()
         } ?: return Optional.empty()
 
         val userPermission = UserPermission()
@@ -141,12 +135,7 @@ class SqlPermissionsRepository(
             .setAdmin(isAdmin)
             .setAccountManager(isAccountManager)
 
-        val resourceIds = getUserPermissionsRecords(id)
-        val resourceRecords = fetchResourceRecords(resourceIds)
-
-        resourceIds.mapNotNull { resourceRecords[it] }.forEach {
-            userPermission.addResource(it)
-        }
+        addUserResources(userPermission)
 
         if (unrestrictedUser != null) {
             userPermission.merge(unrestrictedUser)
@@ -228,34 +217,6 @@ class SqlPermissionsRepository(
             .mapValues { record -> record.value.mapNotNull { allRoles[it] }.toSet() }
     }
 
-    private fun fetchResourceRecords(ids: Collection<ResourceId>): Map<ResourceId, Resource> {
-        val resources = mutableMapOf<ResourceId, Resource>()
-
-        ids.groupBy { it.type }.forEach { (type, resourceIds) ->
-            val resourceForType = resourceTypes[type] ?: return@forEach
-            val objectReaderForType = objectMapper.readerFor(resourceForType.javaClass)
-
-            resourceIds.chunked(
-                dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.read-batch-size", 300)
-            ) { chunk ->
-                val names = chunk.map { it.name }.sorted()
-
-                withRetry(RetryCategory.READ) {
-                    jooq.select(RESOURCE.RESOURCE_NAME, RESOURCE.BODY)
-                        .from(RESOURCE)
-                        .where(RESOURCE.RESOURCE_TYPE.eq(type).and(RESOURCE.RESOURCE_NAME.`in`(*names.toTypedArray())))
-                        .fetch()
-                        .forEach {
-                            resources[ResourceId(type, it.get(RESOURCE.RESOURCE_NAME))] =
-                                objectReaderForType.readValue(it.get(RESOURCE.BODY)) as Resource
-                        }
-                }
-            }
-        }
-
-        return resources
-    }
-
     private fun putUserPermission(permission: UserPermission) {
         val insert = jooq.insertInto(USER, USER.ID, USER.ADMIN, USER.ACCOUNT_MANAGER, USER.UPDATED_AT)
 
@@ -293,7 +254,7 @@ class SqlPermissionsRepository(
         val toStore = mutableListOf<ResourceId>() // ids that are new or changed
 
         resources.forEach {
-            val resourceId = ResourceId(it.resourceType, it.name)
+            val resourceId = ResourceId(it.resourceType, it.name.toLowerCase())
             currentPermissions.add(resourceId)
 
             if (!existingPermissions.contains(resourceId)) {
@@ -351,6 +312,23 @@ class SqlPermissionsRepository(
         }
     }
 
+    private fun addUserResources(userPermission: UserPermission) {
+        withRetry(RetryCategory.READ) {
+            jooq.selectFrom(RESOURCE.naturalJoin(PERMISSION))
+                    .where(PERMISSION.USER_ID.eq(userPermission.id))
+                    .fetchGroups(RESOURCE.RESOURCE_TYPE, RESOURCE.BODY)
+                    .forEach { (type, bodies) ->
+                        val resourceType = resourceTypes[type]?.javaClass
+                        if (resourceType != null) {
+                            bodies.forEach { body ->
+                                val resource = objectMapper.readValue(body, resourceType)
+                                userPermission.addResource(resource)
+                            }
+                        }
+                    }
+        }
+    }
+
     private fun getUserPermissionsRecords(id: String) =
         withRetry(RetryCategory.READ) {
             jooq
@@ -372,7 +350,7 @@ class SqlPermissionsRepository(
         val hashes = mutableMapOf<ResourceId, String>() // id to sha256(body)
 
         resources.forEach {
-            val id = ResourceId(it.resourceType, it.name)
+            val id = ResourceId(it.resourceType, it.name.toLowerCase())
             currentIds.add(id)
 
             val body: String? = objectMapper.writeValueAsString(it)
