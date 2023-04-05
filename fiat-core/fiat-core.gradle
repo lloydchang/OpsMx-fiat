@@ -16,7 +16,7 @@ publishing {
     maven(MavenPublication) {
       groupId = 'io.spinnaker.fiat'
       artifactId = 'fiat-core'
-      version = "OP-16464-1.31.2-SNAPSHOT"
+      version = "1.37.0-SNAPSHOT"
       from components.java
 
       pom {
