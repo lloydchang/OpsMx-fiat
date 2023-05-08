@@ -3,7 +3,7 @@ name: Branch Build fiat publish
 on:
   push:
     branches:
-    - 1.30.1_v1.37.1-test
+    - 1.30.1_v1.37.1
  
 env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Xmx6g -Xms6g
