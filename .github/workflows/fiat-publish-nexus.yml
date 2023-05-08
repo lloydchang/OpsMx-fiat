@@ -75,7 +75,7 @@ jobs:
                cat patchnew >> $i/$i.gradle
              
               done
-              
+             
               cat -n fiat-api/fiat-api.gradle
              
               sed -e '/components\.java/ s/^#*/\/\//' -i fiat-bom/fiat-bom.gradle
