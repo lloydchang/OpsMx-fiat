@@ -79,7 +79,7 @@ jobs:
               cat -n fiat-api/fiat-api.gradle
              
               sed -e '/components\.java/ s/^#*/\/\//' -i fiat-bom/fiat-bom.gradle
-                 sed -e '/1.37.0\-SNAPSHOT/1.37.1\-SNAPSHOT/g' -i gradle.properties 
+                 sed  's/1.37.0\-SNAPSHOT/1.37.1\-SNAPSHOT/g' -i gradle.properties 
                  
                  cat gradle.properties 
           
