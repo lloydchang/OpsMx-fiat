@@ -24,7 +24,7 @@ jobs:
           cache: 'gradle'
       - name: Build
         env:
-          NEXUS_VERSION: OP-16464-1.31.2-SNAPSHOT
+          NEXUS_VERSION: 1.37.1-SNAPSHOT
         run: |
             
               cat <<EOF>> patch
@@ -79,6 +79,6 @@ jobs:
               cat -n fiat-api/fiat-api.gradle
              
               sed -e '/components\.java/ s/^#*/\/\//' -i fiat-bom/fiat-bom.gradle
-                sed -e '/version\=1.37.0\-SNAPSHOT/ s/^OP-16464-1.31.2-SNAPSHOT*/\#/' -i gradle.properties 
+                 sed -e '/version\=1.37.0\-SNAPSHOT/ s/^1.37.1-SNAPSHOT*/\#/' -i gradle.properties 
           
                 ./gradlew --no-daemon -PenableCrossCompilerPlugin=true  publish -x test
