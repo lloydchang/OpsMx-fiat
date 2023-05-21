@@ -28,7 +28,7 @@ jobs:
         run: |
             
               cat <<EOF>> patch
-              
+            
               version = "$NEXUS_VERSION"
               group = 'io.spinnaker.fiat'
               apply plugin: 'maven-publish'
