@@ -47,6 +47,7 @@ import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
@@ -71,6 +72,9 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
   private final Id getPermissionCounterId;
 
   private final RetryHandler retryHandler;
+
+  @Value("${pipeline.rbac:false}")
+  private boolean isPipelineRbac;
 
   interface RetryHandler {
     default <T> T retry(String description, Callable<T> callable) throws Exception {
@@ -463,12 +467,18 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
       }
       return permission.isLegacyFallback() || containsAuth.apply(permission.getApplications());
     } else if (resourceType.equals(ResourceType.PIPELINE)) {
+      log.info("Pipeline RBAC Config : {}", isPipelineRbac);
+      if (!isPipelineRbac) {
+        log.info("Pipeline RBAC not enabled");
+        return true;
+      }
+      log.info("Pipeline RBAC enabled");
       boolean pipelineHasPermissions =
           permission.getPipelines().stream()
               .anyMatch(a -> a.getName().equalsIgnoreCase(resourceName));
 
       if (!pipelineHasPermissions && permission.isAllowAccessToUnknownPipelines()) {
-        // allow access to any applications w/o explicit permissions
+        // allow access to any pipelines w/o explicit permissions
         return true;
       }
       return permission.isLegacyFallback() || containsAuth.apply(permission.getPipelines());
