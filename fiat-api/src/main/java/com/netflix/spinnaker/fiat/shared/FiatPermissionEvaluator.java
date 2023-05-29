@@ -421,6 +421,7 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
     }
 
     if (permission.isAdmin()) {
+      log.info("permissionContains isAdmin for {}", permission.getName());
       // grant access regardless of whether an explicit permission to the resource exists
       return true;
     }
@@ -467,9 +468,8 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
       }
       return permission.isLegacyFallback() || containsAuth.apply(permission.getApplications());
     } else if (resourceType.equals(ResourceType.PIPELINE)) {
-      log.info("Pipeline RBAC Config : {}", isPipelineRbac);
       if (!isPipelineRbac) {
-        log.info("Pipeline RBAC not enabled");
+        log.info("Pipeline RBAC disabled so not evaluating pipeline level authorisation");
         return true;
       }
       log.info("Pipeline RBAC enabled");
