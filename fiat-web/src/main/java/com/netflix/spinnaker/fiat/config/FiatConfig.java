@@ -139,7 +139,7 @@ public class FiatConfig extends WebMvcConfigurerAdapter {
   }
 
   @Bean
-  @ConditionalOnProperty(value = "pipeline.rbac", havingValue = "true", matchIfMissing = true)
+  @ConditionalOnProperty(value = "pipeline.rbac", havingValue = "true")
   DefaultPipelineResourceProvider pipelineProvider(
       Front50Service front50Service,
       ResourcePermissionProvider<Pipeline> permissionProvider,
