@@ -416,11 +416,18 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
       String resourceName,
       ResourceType resourceType,
       Authorization authorization) {
+    log.info(
+        "permissionContains started for: {} and resourceName is: {} and resourceType is: {} and authorization",
+        permission.getName(),
+        resourceName,
+        resourceType,
+        authorization.name());
     if (permission == null) {
       return false;
     }
 
     if (permission.isAdmin()) {
+      log.info("permissionContains isAdmin for {}", permission.getName());
       // grant access regardless of whether an explicit permission to the resource exists
       return true;
     }
