@@ -73,6 +73,10 @@ jobs:
               do
                sed  s/NEXUSARTIID/$i/g patch > patchnew
                cat patchnew >> $i/$i.gradle
+               
+               echo $i.gradle
+               echo --------
+               cat $i/$i.gradle
              
               done
              
