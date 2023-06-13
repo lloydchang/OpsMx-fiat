@@ -58,8 +58,8 @@ jobs:
                      }
                 }
                }  
-                               tasks.withType(GenerateModuleMetadata).configureEach {
-                                         suppressedValidationErrors.add('enforced-platform')
+                               #tasks.withType(GenerateModuleMetadata).configureEach {
+                                         #suppressedValidationErrors.add('enforced-platform')
                                        }
 
               EOF
