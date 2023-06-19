@@ -205,6 +205,11 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
 
   public boolean hasPermission(
       String username, Serializable resourceName, String resourceType, Object authorization) {
+    log.debug(
+        "permissions verify for  username={}, resourceName={}, resourceType={} ",
+        username,
+        resourceName,
+        resourceType);
     if (!fiatStatus.isEnabled()) {
       return true;
     }
@@ -237,7 +242,7 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
 
     UserPermission.View permission = getPermission(username);
     boolean hasPermission = permissionContains(permission, resourceName.toString(), r, a);
-
+    log.debug("permissionContains , hasPermission ={}", hasPermission);
     authorizationFailure.set(
         hasPermission ? null : new AuthorizationFailure(a, r, resourceName.toString()));
 
@@ -250,7 +255,7 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
         log.warn("Legacy fallback granted {} access (type: {}, resource: {})", a, r, resourceName);
       }
     }
-
+    log.debug("hasPermission ={}", hasPermission);
     return hasPermission;
   }
 
@@ -435,11 +440,12 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
       boolean applicationHasPermissions =
           permission.getApplications().stream()
               .anyMatch(a -> a.getName().equalsIgnoreCase(resourceName));
-
+      log.debug("applicationHasPermissions :{}", applicationHasPermissions);
       if (!applicationHasPermissions && permission.isAllowAccessToUnknownApplications()) {
         // allow access to any applications w/o explicit permissions
         return true;
       }
+      log.debug("After // allow access to any applications w/o explicit permissions");
       return permission.isLegacyFallback() || containsAuth.apply(permission.getApplications());
     } else if (resourceType.equals(ResourceType.PIPELINE)) {
       boolean pipelineHasPermissions =
