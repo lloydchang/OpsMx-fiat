@@ -36,6 +36,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -43,6 +45,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -56,6 +59,8 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
   private final AccountManagerConfig accountManagerConfig;
   private final ObjectMapper mapper;
 
+  private final int threadPoolAllocation;
+
   @Autowired
   public DefaultPermissionsResolver(
       UserRolesProvider userRolesProvider,
@@ -63,13 +68,15 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
       List<ResourceProvider<? extends Resource>> resourceProviders,
       FiatAdminConfig fiatAdminConfig,
       AccountManagerConfig accountManagerConfig,
-      @Qualifier("objectMapper") ObjectMapper mapper) {
+      @Qualifier("objectMapper") ObjectMapper mapper,
+      @Value("${fiat.thread-pool-allocation:10}") int threadPoolAllocation) {
     this.userRolesProvider = userRolesProvider;
     this.serviceAccountProvider = serviceAccountProvider;
     this.resourceProviders = ImmutableList.copyOf(resourceProviders);
     this.fiatAdminConfig = fiatAdminConfig;
     this.accountManagerConfig = accountManagerConfig;
     this.mapper = mapper;
+    this.threadPoolAllocation = threadPoolAllocation;
   }
 
   @Override
@@ -209,20 +216,32 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
   @Override
   public Map<String, UserPermission> resolveResources(
       @NonNull Map<String, Collection<Role>> userToRoles) {
-    return userToRoles.entrySet().parallelStream()
-        .map(
-            entry -> {
-              String userId = entry.getKey();
-              Set<Role> userRoles = new HashSet<>(entry.getValue());
+    log.info("**** thread count before custom thread pool: " + Thread.activeCount());
+    ForkJoinPool customThreadPool = new ForkJoinPool(threadPoolAllocation);
+    try {
+      return customThreadPool.submit( () ->
+      {
+          log.info("##### thread count with custom thread pool: " + Thread.activeCount());
+           return userToRoles.entrySet().parallelStream()
+                      .map(
+              entry -> {
+                String userId = entry.getKey();
+                Set<Role> userRoles = new HashSet<>(entry.getValue());
 
-              return new UserPermission()
-                  .setId(userId)
-                  .setRoles(userRoles)
-                  .setAdmin(hasAdminRole(userRoles))
-                  .setAccountManager(hasAccountManagerRole(userRoles))
-                  .addResources(getResources(userId, userRoles, hasAdminRole(userRoles)));
-            })
-        .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+                return new UserPermission()
+                    .setId(userId)
+                    .setRoles(userRoles)
+                    .setAdmin(hasAdminRole(userRoles))
+                    .setAccountManager(hasAccountManagerRole(userRoles))
+                    .addResources(getResources(userId, userRoles, hasAdminRole(userRoles)));
+              })
+          .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+    }).get();
+    } catch (InterruptedException | ExecutionException e) {
+      throw new RuntimeException(e);
+    } finally {
+      customThreadPool.shutdown();
+    }
   }
 
   private Set<Resource> getResources(String userId, Set<Role> userRoles, boolean isAdmin) {
