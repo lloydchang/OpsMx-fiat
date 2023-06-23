@@ -219,24 +219,27 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     log.info("**** thread count before custom thread pool: " + Thread.activeCount());
     ForkJoinPool customThreadPool = new ForkJoinPool(threadPoolAllocation);
     try {
-      return customThreadPool.submit( () ->
-      {
-          log.info("##### thread count with custom thread pool: " + Thread.activeCount());
-           return userToRoles.entrySet().parallelStream()
-                      .map(
-              entry -> {
-                String userId = entry.getKey();
-                Set<Role> userRoles = new HashSet<>(entry.getValue());
+      return customThreadPool
+          .submit(
+              () -> {
+                log.info("##### thread count with custom thread pool: " + Thread.activeCount());
+                return userToRoles.entrySet().parallelStream()
+                    .map(
+                        entry -> {
+                          String userId = entry.getKey();
+                          Set<Role> userRoles = new HashSet<>(entry.getValue());
 
-                return new UserPermission()
-                    .setId(userId)
-                    .setRoles(userRoles)
-                    .setAdmin(hasAdminRole(userRoles))
-                    .setAccountManager(hasAccountManagerRole(userRoles))
-                    .addResources(getResources(userId, userRoles, hasAdminRole(userRoles)));
+                          return new UserPermission()
+                              .setId(userId)
+                              .setRoles(userRoles)
+                              .setAdmin(hasAdminRole(userRoles))
+                              .setAccountManager(hasAccountManagerRole(userRoles))
+                              .addResources(
+                                  getResources(userId, userRoles, hasAdminRole(userRoles)));
+                        })
+                    .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
               })
-          .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
-    }).get();
+          .get();
     } catch (InterruptedException | ExecutionException e) {
       throw new RuntimeException(e);
     } finally {

@@ -16,6 +16,7 @@
 
 package com.netflix.spinnaker.fiat.roles;
 
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -57,7 +58,7 @@ public class CallableCache<Key, Result> {
   }
 
   void clear(Key key) {
-    if(key == null) {
+    if (key == null) {
       return;
     }
     try {
@@ -65,6 +66,7 @@ public class CallableCache<Key, Result> {
       var future = cache.get(key);
       if (future != null && (future.isDone() || future.isCancelled())) {
         cache.remove(key);
+        log.info("***** Removing element from cache identified by key: " + key);
         log.debug("Removing element from cache identified by key: " + key);
       }
     } finally {
@@ -73,6 +75,17 @@ public class CallableCache<Key, Result> {
   }
 
   private boolean isPresent(Key key) {
+    log.info(
+        "**** Does the key {} present in callable cache ? : {}. \n Cache size : {}",
+        key,
+        this.cache.containsKey(key),
+        this.cache.size());
+    if (!this.cache.isEmpty() && this.cache.size() < 10) {
+      log.info("**** printing all the callableCache keys......");
+      for (Object k : this.cache.keySet()) {
+        log.info("Key: {}, roles: {}", k, String.join(", ", (List<String>) k));
+      }
+    }
     return this.cache.containsKey(key);
   }
 
