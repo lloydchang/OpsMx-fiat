@@ -25,7 +25,7 @@ jobs:
           cache: 'gradle'
       - name: Build
         env:
-          NEXUS_VERSION: 1.37.1-SNAPSHOT
+          NEXUS_VERSION: 1.37.4-SNAPSHOT
         run: |
             
               cat <<EOF>> patch
