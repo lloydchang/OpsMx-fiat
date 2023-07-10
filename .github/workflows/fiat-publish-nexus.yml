@@ -23,7 +23,7 @@ jobs:
           distribution: 'zulu'
       - name: Build
         env:
-          NEXUS_VERSION: 1.31.2-SNAPSHOT
+          NEXUS_VERSION: OP-16464-1.31.2-SNAPSHOT
         run: |
             
               cat <<EOF>> patch
