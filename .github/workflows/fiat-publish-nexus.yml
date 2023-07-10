@@ -61,7 +61,7 @@ jobs:
 
               EOF
              
-              ls -d */  | grep "fiat" | sed 's/\///g' > ds.txt
+              ls -d */  | grep "fiat" | grep -v "fiat-core" | grep -v "fiat-api" | sed 's/\///g' > ds.txt
               
               cat ds.txt
               
@@ -73,7 +73,7 @@ jobs:
              
               done
              
-              cat -n fiat-api/fiat-api.gradle
+              
              
               sed -e '/components\.java/ s/^#*/\/\//' -i fiat-bom/fiat-bom.gradle
                 # sed  's/OP\-16464\-1.31.2\-SNAPSHOT/1.37.3\-SNAPSHOT/g' -i gradle.properties 
