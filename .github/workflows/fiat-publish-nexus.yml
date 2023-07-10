@@ -61,7 +61,7 @@ jobs:
 
               EOF
              
-              ls -d */  | grep "fiat" | grep -v "fiat-core" | grep -v "fiat-api" | sed 's/\///g' > ds.txt
+              ls -d */  | grep "fiat"  | sed 's/\///g' > ds.txt
               
               cat ds.txt
               
