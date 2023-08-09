@@ -60,5 +60,10 @@ The JVM will then listen for a debugger to be attached on port 7103.  The JVM wi
 to be attached before starting Fiat; the relevant JVM arguments can be seen and modified as needed in `build.gradle`.
 
 
+$${\color{lightblue} Recent \space commits:}$$ 
+
+              CommitID                   |   Author      | Commit Message          | Commit Date
+----------------------------------------------------------------------------------------------------
+
 
 625d789dff8b0d4d72d2f3cecc28fe2efdbd0824 | Yugandharkumar | Create commits-preserve.yml | 2023-08-09 
