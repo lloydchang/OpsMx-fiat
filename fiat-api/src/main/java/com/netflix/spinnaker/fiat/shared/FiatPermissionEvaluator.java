@@ -24,6 +24,7 @@ import com.netflix.spinnaker.fiat.model.Authorization;
 import com.netflix.spinnaker.fiat.model.SpinnakerAuthorities;
 import com.netflix.spinnaker.fiat.model.UserPermission;
 import com.netflix.spinnaker.fiat.model.resources.Account;
+import com.netflix.spinnaker.fiat.model.resources.Application;
 import com.netflix.spinnaker.fiat.model.resources.Authorizable;
 import com.netflix.spinnaker.fiat.model.resources.ResourceType;
 import com.netflix.spinnaker.kork.exceptions.IntegrationException;
@@ -155,6 +156,7 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
   public boolean hasPermission(
       Authentication authentication, Object resource, Object authorization) {
     if (!fiatStatus.isGrantedAuthoritiesEnabled()) {
+      log.info("*PERMISSION_DENIED* - GrantedAuthorities is not enabled!!");
       return false;
     }
     if (!fiatStatus.isEnabled()) {
@@ -165,14 +167,24 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
           "Permission denied because at least one of the required arguments was null. authentication={}, resource={}",
           authentication,
           resource);
+      log.info(
+          "*PERMISSION_DENIED* - at least one of the required arguments was null. authentication={}, resource={}",
+          authentication,
+          resource);
       return false;
     }
     if (authentication.getAuthorities().contains(SpinnakerAuthorities.ADMIN_AUTHORITY)) {
       return true;
     }
     if (resource instanceof AccessControlled) {
-      return ((AccessControlled) resource).isAuthorized(authentication, authorization);
+      boolean hasPermission =
+          ((AccessControlled) resource).isAuthorized(authentication, authorization);
+      if (!hasPermission) {
+        log.info("*PERMISSION_DENIED* - AccessControlled.isAuthorized() is false!!");
+      }
+      return hasPermission;
     }
+    log.info("*PERMISSION_DENIED* - resource is not AccessControlled.");
     return false;
   }
 
@@ -240,6 +252,12 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
           resourceName,
           resourceType,
           authorization);
+      log.info(
+          "*PERMISSION_DENIED* - at least one of the required arguments was null. resourceName={}, resourceType={}, "
+              + "authorization={}",
+          resourceName,
+          resourceType,
+          authorization);
       return false;
     }
 
@@ -275,7 +293,9 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
         log.warn("Legacy fallback granted {} access (type: {}, resource: {})", a, r, resourceName);
       }
     }
-
+    if (!hasPermission) {
+      log.info("*PERMISSION_DENIED* - user: {} doesn't have permissions", username);
+    }
     return hasPermission;
   }
 
@@ -417,6 +437,7 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
       ResourceType resourceType,
       Authorization authorization) {
     if (permission == null) {
+      log.info("*PERMISSION_DENIED* - permission is null");
       return false;
     }
 
@@ -444,16 +465,33 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
 
       // Todo(jonsie): Debug transitory access denied issue, remove when not necessary
       if (!authorized) {
-        Map<String, Set<Authorization>> accounts =
-            permission.getAccounts().stream()
-                .collect(Collectors.toMap(Account.View::getName, Account.View::getAuthorizations));
+        Map<String, Set<Authorization>> accounts = null;
 
-        log.debug(
-            "Authorization={} denied to account={} for user permission={}, found={}",
-            authorization.toString(),
-            resourceName,
-            permission.getName(),
-            accounts.toString());
+        try {
+          accounts =
+              permission.getAccounts().stream()
+                  .collect(
+                      Collectors.toMap(Account.View::getName, Account.View::getAuthorizations));
+
+          log.debug(
+              "Authorization={} denied to account={} for user permission={}, found={}",
+              authorization.toString(),
+              resourceName,
+              permission.getName(),
+              accounts.toString());
+        } catch (Throwable e) {
+          log.error("error building accounts map", e);
+          // accounts is likely null, but in the off chance it's not, explicitly set it.
+          accounts = null;
+        }
+        if (!authorized) {
+          log.info(
+              "*PERMISSION_DENIED* - Authorization={} denied to account={} for user permission={}, found={}",
+              authorization.toString(),
+              resourceName,
+              permission.getName(),
+              accounts);
+        }
       }
 
       return authorized;
@@ -466,7 +504,33 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
         // allow access to any applications w/o explicit permissions
         return true;
       }
-      return permission.isLegacyFallback() || containsAuth.apply(permission.getApplications());
+      applicationHasPermissions =
+          permission.isLegacyFallback() || containsAuth.apply(permission.getApplications());
+      if (!applicationHasPermissions) {
+        try {
+          Map<String, Set<Authorization>> applications =
+              permission.getApplications().stream()
+                  .collect(
+                      Collectors.toMap(
+                          Application.View::getName, Application.View::getAuthorizations));
+
+          log.info(
+              "*PERMISSION_DENIED* - Authorization={} denied to application={} for user permission={}, found={}",
+              authorization.toString(),
+              resourceName,
+              permission.getName(),
+              applications);
+        } catch (Throwable e) {
+          log.error(
+              "*PERMISSION_DENIED* - Authorization={} denied to application={} for user permission={} "
+                  + "(error building applications map)",
+              authorization.toString(),
+              resourceName,
+              permission.getName(),
+              e);
+        }
+      }
+      return applicationHasPermissions;
     } else if (resourceType.equals(ResourceType.PIPELINE)) {
       if (!isPipelineRbac) {
         log.info("Pipeline RBAC disabled so not evaluating pipeline level authorisation");
@@ -483,15 +547,40 @@ public class FiatPermissionEvaluator implements PermissionEvaluator {
       }
       return permission.isLegacyFallback() || containsAuth.apply(permission.getPipelines());
     } else if (resourceType.equals(ResourceType.SERVICE_ACCOUNT)) {
-      return permission.getServiceAccounts().stream()
-          .anyMatch(view -> view.getName().equalsIgnoreCase(resourceName));
+      boolean hasPermission =
+          permission.getServiceAccounts().stream()
+              .anyMatch(view -> view.getName().equalsIgnoreCase(resourceName));
+      if (!hasPermission) {
+        log.info(
+            "*PERMISSION_DENIED* - Authorization={} denied to the service account: {}",
+            authorization,
+            resourceName);
+      }
+      return hasPermission;
     } else if (resourceType.equals(ResourceType.BUILD_SERVICE)) {
-      return permission.isLegacyFallback() || containsAuth.apply(permission.getBuildServices());
+      boolean hasPermission =
+          permission.isLegacyFallback() || containsAuth.apply(permission.getBuildServices());
+      if (!hasPermission) {
+        log.info(
+            "*PERMISSION_DENIED* - Authorization={} denied to the build service: {}",
+            authorization.toString(),
+            resourceName);
+      }
+      return hasPermission;
     } else if (permission.getExtensionResources() != null
         && permission.getExtensionResources().containsKey(resourceType)) {
       val extensionResources = permission.getExtensionResources().get(resourceType);
-      return permission.isLegacyFallback() || containsAuth.apply(extensionResources);
+      boolean hasPermission =
+          permission.isLegacyFallback() || containsAuth.apply(extensionResources);
+      if (!hasPermission) {
+        log.info(
+            "*PERMISSION_DENIED* - Authorization={} denied to the extension resource: {}",
+            authorization.toString(),
+            resourceName);
+      }
+      return hasPermission;
     } else {
+      log.info("*PERMISSION_DENIED* - unknown resource type!!!");
       return false;
     }
   }

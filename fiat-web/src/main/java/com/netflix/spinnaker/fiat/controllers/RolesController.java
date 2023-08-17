@@ -32,6 +32,7 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -102,7 +103,8 @@ public class RolesController {
   public long sync(
       HttpServletResponse response, @RequestBody(required = false) List<String> specificRoles)
       throws IOException {
-
+    StopWatch watch = new StopWatch("RolesController.sync");
+    watch.start();
     log.info("Role sync invoked by web request for roles: {}", specificRoles);
     long count = syncer.syncAndReturn(specificRoles);
     if (count == 0) {
@@ -111,6 +113,8 @@ public class RolesController {
           HttpServletResponse.SC_SERVICE_UNAVAILABLE,
           "Error occurred syncing permissions. See Fiat Logs.");
     }
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
     return count;
   }
 

@@ -43,6 +43,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Status;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
 import org.springframework.util.backoff.BackOffExecution;
 import org.springframework.util.backoff.FixedBackOff;
 
@@ -76,6 +77,8 @@ public class Synchronizer {
   }
 
   public long syncAndReturn(List<String> roles) {
+    StopWatch watch = new StopWatch("Synchronizer.syncAndReturn");
+    watch.start();
     FixedBackOff backoff = new FixedBackOff();
     backoff.setInterval(this.retryIntervalMs);
     backoff.setMaxAttempts(Math.floorDiv(this.syncDelayTimeoutMs, this.retryIntervalMs) + 1);
@@ -107,8 +110,10 @@ public class Synchronizer {
         if (!serviceAccountsExists) {
           combo.putAll(temp);
         }
-
-        return this.updateUserPermissions(combo);
+        long syncedRoles = this.updateUserPermissions(combo);
+        watch.stop();
+        log.info("*** {}, or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+        return syncedRoles;
       } catch (ProviderException | PermissionResolutionException ex) {
         this.registry
             .counter(metricName("syncFailure"), "cause", ex.getClass().getSimpleName())
@@ -119,6 +124,8 @@ public class Synchronizer {
           String cause = (waitTime == BackOffExecution.STOP) ? "backoff-exhausted" : "timeout";
           registry.counter("syncAborted", "cause", cause).increment();
           log.error("Unable to resolve service account permissions.", ex);
+          watch.stop();
+          log.info("*** {}, or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
           return 0;
         }
         String message =
@@ -194,6 +201,8 @@ public class Synchronizer {
   }
 
   private long updateUserPermissions(Map<String, Set<Role>> rolesById) {
+    StopWatch watch = new StopWatch("Synchronizer.updateUserPermissions");
+    watch.start("getExternalUserObjects");
     if (rolesById.remove(UnrestrictedResourceConfig.UNRESTRICTED_USERNAME) != null) {
       timeIt(
           "syncAnonymous",
@@ -214,9 +223,10 @@ public class Synchronizer {
                                 .filter(role -> role.getSource() == Role.Source.EXTERNAL)
                                 .collect(Collectors.toList())))
             .collect(Collectors.toList());
-
+    watch.stop();
     if (extUsers.isEmpty()) {
       log.info("Found no non-anonymous user roles to sync.");
+      log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
       return 0;
     }
 
@@ -224,11 +234,16 @@ public class Synchronizer {
         timeIt(
             "syncUsers",
             () -> {
+              watch.start("resolveExternalUsers");
               Map<String, UserPermission> values = permissionsResolver.resolve(extUsers);
+              watch.stop();
+              watch.start("permissionsRepository.putAllById");
               permissionsRepository.putAllById(values);
+              watch.stop();
               return values.size();
             });
     log.info("Synced {} non-anonymous user roles.", count);
+    log.info("*** {} \n total seconds : {}", watch.prettyPrint(), watch.getTotalTimeSeconds());
     return count;
   }
 

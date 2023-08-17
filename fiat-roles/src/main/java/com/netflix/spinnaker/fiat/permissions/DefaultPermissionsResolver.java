@@ -36,8 +36,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -47,6 +45,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
 
 @Component
 @Slf4j
@@ -181,7 +180,7 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     long startTime = System.currentTimeMillis();
     Map<String, UserPermission> resolvedResources = resolveResources(userToRoles);
     long elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000;
-    log.info("** {}s to create {} UserPermission objects", elapsedSeconds, userToRoles.size());
+    log.info("*** {}s to create {} UserPermission objects", elapsedSeconds, userToRoles.size());
     return resolvedResources;
   }
 
@@ -216,35 +215,26 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
   @Override
   public Map<String, UserPermission> resolveResources(
       @NonNull Map<String, Collection<Role>> userToRoles) {
-    log.info("**** thread count before custom thread pool: " + Thread.activeCount());
-    ForkJoinPool customThreadPool = new ForkJoinPool(threadPoolAllocation);
-    try {
-      return customThreadPool
-          .submit(
-              () -> {
-                log.info("##### thread count with custom thread pool: " + Thread.activeCount());
-                return userToRoles.entrySet().parallelStream()
-                    .map(
-                        entry -> {
-                          String userId = entry.getKey();
-                          Set<Role> userRoles = new HashSet<>(entry.getValue());
+    StopWatch watch = new StopWatch("DefaultPermissionsResolver.resolveResources");
+    watch.start();
+    Map<String, UserPermission> resolved =
+        userToRoles.entrySet().stream()
+            .map(
+                entry -> {
+                  String userId = entry.getKey();
+                  Set<Role> userRoles = new HashSet<>(entry.getValue());
 
-                          return new UserPermission()
-                              .setId(userId)
-                              .setRoles(userRoles)
-                              .setAdmin(hasAdminRole(userRoles))
-                              .setAccountManager(hasAccountManagerRole(userRoles))
-                              .addResources(
-                                  getResources(userId, userRoles, hasAdminRole(userRoles)));
-                        })
-                    .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
-              })
-          .get();
-    } catch (InterruptedException | ExecutionException e) {
-      throw new RuntimeException(e);
-    } finally {
-      customThreadPool.shutdown();
-    }
+                  return new UserPermission()
+                      .setId(userId)
+                      .setRoles(userRoles)
+                      .setAdmin(hasAdminRole(userRoles))
+                      .setAccountManager(hasAccountManagerRole(userRoles))
+                      .addResources(getResources(userId, userRoles, hasAdminRole(userRoles)));
+                })
+            .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+    watch.stop();
+    log.info("*** {}, or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+    return resolved;
   }
 
   private Set<Resource> getResources(String userId, Set<Role> userRoles, boolean isAdmin) {
