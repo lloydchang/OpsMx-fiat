@@ -71,3 +71,6 @@ $${\color{lightblue} Recent \space commits:}$$
 
 
 1028add6058f12b11562c63c5e4210ab9ce84fef | Yugandharkumar | Update Dockerfile | 2023-08-11 
+
+
+355e998aa564649e68bb92f6eebaf063b371ed42 | Kiran Godishala | added logs to trace permission denied exception and stopwatch for elapsed time (#8) | 2023-08-17 
