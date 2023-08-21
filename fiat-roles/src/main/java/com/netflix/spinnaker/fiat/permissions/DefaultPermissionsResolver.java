@@ -42,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
 
 @Component
 @Slf4j
@@ -155,8 +156,11 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     userToRoles.putAll(
         serviceAccounts.stream()
             .collect(Collectors.toMap(ExternalUser::getId, ExternalUser::getExternalRoles)));
-
-    return resolveResources(userToRoles);
+    long startTime = System.currentTimeMillis();
+    Map<String, UserPermission> resolvedResources = resolveResources(userToRoles);
+    long elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000;
+    log.info("*** {}s to create {} UserPermission objects", elapsedSeconds, userToRoles.size());
+    return resolvedResources;
   }
 
   private Map<String, Collection<Role>> getServiceAccountRoles() {
@@ -189,7 +193,10 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
 
   private Map<String, UserPermission> resolveResources(
       @NonNull Map<String, Collection<Role>> userToRoles) {
-    return userToRoles.entrySet().stream()
+    StopWatch watch = new StopWatch("DefaultPermissionsResolver.resolveResources");
+    watch.start();
+    Map<String, UserPermission> resolved =
+     userToRoles.entrySet().stream()
         .map(
             entry -> {
               String userId = entry.getKey();
@@ -202,6 +209,9 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
                   .addResources(getResources(userId, userRoles, resolveAdminRole(userRoles)));
             })
         .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+    watch.stop();
+    log.info("*** {}, or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+    return resolved;
   }
 
   private Set<Resource> getResources(String userId, Set<Role> userRoles, boolean isAdmin) {
