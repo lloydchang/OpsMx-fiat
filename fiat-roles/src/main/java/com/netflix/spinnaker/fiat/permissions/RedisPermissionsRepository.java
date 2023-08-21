@@ -286,7 +286,7 @@ public class RedisPermissionsRepository implements PermissionsRepository {
     if (permissions == null || permissions.values() == null) {
       return;
     }
-
+    log.info("*** put {} permissions into redis...", permissions.size());
     for (UserPermission permission : permissions.values()) {
       put(permission);
     }
