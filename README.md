@@ -58,3 +58,20 @@ To start the JVM in debug mode, set the Java system property `DEBUG=true`:
 
 The JVM will then listen for a debugger to be attached on port 7103.  The JVM will _not_ wait for the debugger
 to be attached before starting Fiat; the relevant JVM arguments can be seen and modified as needed in `build.gradle`.
+
+
+$${\color{lightblue} Recent \space commits:}$$ 
+
+              CommitID                   |   Author      | Commit Message          | Commit Date
+----------------------------------------------------------------------------------------------------
+
+
+135add054feedb16048d5ff145213e64887d0719 | Yugandharkumar | Create commits-preserve.yml | 2023-08-09 
+
+
+
+91dfc2361cac8e20ee936bbd8ecc42b7aa2f7b1a | Kiran Godishala | add stopwatch to collect elapsed time of relevant methods (#9) | 2023-08-21 
+
+
+ae6cb3cc2759532d9eb9b08f9e2c2c177d9bca14 | sanopsmx | Added logs to find which api is taking time. | 2023-08-29 
+>>>>>>> 9408e01 (Version 1.16.0 1.26.6 (#10))

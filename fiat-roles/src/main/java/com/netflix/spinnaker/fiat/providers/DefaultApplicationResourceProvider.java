@@ -33,7 +33,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StopWatch;
 
+@Slf4j
 public class DefaultApplicationResourceProvider extends BaseResourceProvider<Application>
     implements ResourceProvider<Application> {
 
@@ -70,9 +73,19 @@ public class DefaultApplicationResourceProvider extends BaseResourceProvider<App
 
   @Override
   protected Set<Application> loadAll() throws ProviderException {
+    StopWatch watch = new StopWatch("loadAll.method");
+    watch.start();
     try {
+      StopWatch watch1 = new StopWatch("front50Service.applications");
+      watch1.start();
       List<Application> front50Applications = front50Service.getAllApplications();
+      watch1.stop();
+      log.info("*** {} or {}s", watch1.shortSummary(), watch1.getTotalTimeSeconds());
+      StopWatch watch2 = new StopWatch("clouddriver.applications");
+      watch2.start();
       List<Application> clouddriverApplications = clouddriverService.getApplications();
+      watch2.stop();
+      log.info("*** {} or {}s", watch2.shortSummary(), watch2.getTotalTimeSeconds());
 
       // Stream front50 first so that if there's a name collision, we'll keep that one instead of
       // the clouddriver application (since front50 might have permissions stored on it, but the
@@ -97,11 +110,18 @@ public class DefaultApplicationResourceProvider extends BaseResourceProvider<App
       if (allowAccessToUnknownApplications) {
         // no need to include applications w/o explicit permissions if we're allowing access to
         // unknown applications by default
-        return applications.stream()
-            .filter(a -> a.getPermissions().isRestricted())
-            .collect(toImmutableSet());
+        Set<Application> applicationSet =
+            applications.stream()
+                .filter(a -> a.getPermissions().isRestricted())
+                .collect(toImmutableSet());
+        watch.stop();
+        log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+        return applicationSet;
       } else {
-        return ImmutableSet.copyOf(applications);
+        Set<Application> applicationSet = ImmutableSet.copyOf(applications);
+        watch.stop();
+        log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+        return applicationSet;
       }
     } catch (RuntimeException e) {
       throw new ProviderException(this.getClass(), e);

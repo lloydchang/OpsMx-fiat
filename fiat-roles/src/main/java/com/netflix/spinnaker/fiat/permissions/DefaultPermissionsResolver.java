@@ -27,13 +27,7 @@ import com.netflix.spinnaker.fiat.model.resources.ServiceAccount;
 import com.netflix.spinnaker.fiat.providers.ProviderException;
 import com.netflix.spinnaker.fiat.providers.ResourceProvider;
 import com.netflix.spinnaker.fiat.roles.UserRolesProvider;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -136,6 +130,8 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
 
   @Override
   public Map<String, UserPermission> resolve(@NonNull Collection<ExternalUser> users) {
+    StopWatch watch = new StopWatch("resolve.start");
+    watch.start();
     Map<String, Collection<Role>> allServiceAccountRoles = getServiceAccountRoles();
 
     Collection<ExternalUser> serviceAccounts =
@@ -160,17 +156,27 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     Map<String, UserPermission> resolvedResources = resolveResources(userToRoles);
     long elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000;
     log.info("*** {}s to create {} UserPermission objects", elapsedSeconds, userToRoles.size());
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
     return resolvedResources;
   }
 
   private Map<String, Collection<Role>> getServiceAccountRoles() {
-    return serviceAccountProvider.getAll().stream()
-        .map(ServiceAccount::toUserPermission)
-        .collect(Collectors.toMap(UserPermission::getId, UserPermission::getRoles));
+    StopWatch watch = new StopWatch("getServiceAccountRoles.method");
+    watch.start();
+    Map<String, Collection<Role>> serviceAccountRoles =
+        serviceAccountProvider.getAll().stream()
+            .map(ServiceAccount::toUserPermission)
+            .collect(Collectors.toMap(UserPermission::getId, UserPermission::getRoles));
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+    return serviceAccountRoles;
   }
 
   private Map<String, Collection<Role>> getAndMergeUserRoles(
       @NonNull Collection<ExternalUser> users) {
+    StopWatch watch = new StopWatch("getAndMergeUserRoles.method");
+    watch.start();
     Map<String, Collection<Role>> userToRoles = userRolesProvider.multiLoadRoles(users);
 
     users.forEach(
@@ -188,6 +194,8 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
         log.debug("Exception writing roles", e);
       }
     }
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
     return userToRoles;
   }
 
@@ -196,19 +204,19 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     StopWatch watch = new StopWatch("DefaultPermissionsResolver.resolveResources");
     watch.start();
     Map<String, UserPermission> resolved =
-     userToRoles.entrySet().stream()
-        .map(
-            entry -> {
-              String userId = entry.getKey();
-              Set<Role> userRoles = new HashSet<>(entry.getValue());
+        userToRoles.entrySet().stream()
+            .map(
+                entry -> {
+                  String userId = entry.getKey();
+                  Set<Role> userRoles = new HashSet<>(entry.getValue());
 
-              return new UserPermission()
-                  .setId(userId)
-                  .setRoles(userRoles)
-                  .setAdmin(resolveAdminRole(userRoles))
-                  .addResources(getResources(userId, userRoles, resolveAdminRole(userRoles)));
-            })
-        .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+                  return new UserPermission()
+                      .setId(userId)
+                      .setRoles(userRoles)
+                      .setAdmin(resolveAdminRole(userRoles))
+                      .addResources(getResources(userId, userRoles, resolveAdminRole(userRoles)));
+                })
+            .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
     watch.stop();
     log.info("*** {}, or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
     return resolved;
