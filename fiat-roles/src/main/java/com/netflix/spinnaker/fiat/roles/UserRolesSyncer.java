@@ -48,6 +48,7 @@ import org.springframework.boot.actuate.health.Status;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StopWatch;
 import org.springframework.util.backoff.BackOffExecution;
 import org.springframework.util.backoff.FixedBackOff;
 
@@ -152,7 +153,11 @@ public class UserRolesSyncer {
     }
 
     // Ensure we're going to reload app and service account definitions
+    StopWatch watch = new StopWatch("permissionsResolver.clearCache");
+    watch.start();
     permissionsResolver.clearCache();
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
 
     while (true) {
       try {
@@ -210,29 +215,51 @@ public class UserRolesSyncer {
   }
 
   private Map<String, UserPermission> getServiceAccountsAsMap(List<String> roles) {
+    StopWatch watch = new StopWatch("getServiceAccountsAsMap.method");
+    watch.start();
     List<UserPermission> allServiceAccounts =
         serviceAccountProvider.getAll().stream()
             .map(ServiceAccount::toUserPermission)
             .collect(Collectors.toList());
     if (roles == null || roles.isEmpty()) {
-      return allServiceAccounts.stream()
-          .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+      Map<String, UserPermission> serviceAccountsMap =
+          allServiceAccounts.stream()
+              .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+      watch.stop();
+      log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+      return serviceAccountsMap;
     } else {
-      return allServiceAccounts.stream()
-          .filter(p -> p.getRoles().stream().map(Role::getName).anyMatch(roles::contains))
-          .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+      Map<String, UserPermission> serviceAccountsMap =
+          allServiceAccounts.stream()
+              .filter(p -> p.getRoles().stream().map(Role::getName).anyMatch(roles::contains))
+              .collect(Collectors.toMap(UserPermission::getId, Function.identity()));
+      watch.stop();
+      log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+      return serviceAccountsMap;
     }
   }
 
   private Map<String, UserPermission> getUserPermissions(List<String> roles) {
     if (roles == null || roles.isEmpty()) {
-      return permissionsRepository.getAllById();
+      StopWatch watch = new StopWatch("getUserPermissions.getAllById");
+      watch.start();
+      Map<String, UserPermission> userPermissionMap = permissionsRepository.getAllById();
+      watch.stop();
+      log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+      return userPermissionMap;
     } else {
-      return permissionsRepository.getAllByRoles(roles);
+      StopWatch watch = new StopWatch("getUserPermissions.getAllByRoles");
+      watch.start();
+      Map<String, UserPermission> userPermissionMap = permissionsRepository.getAllByRoles(roles);
+      watch.stop();
+      log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+      return userPermissionMap;
     }
   }
 
   public long updateUserPermissions(Map<String, UserPermission> permissionsById) {
+    StopWatch watch = new StopWatch("updateUserPermissions.method");
+    watch.start();
     if (permissionsById.remove(UnrestrictedResourceConfig.UNRESTRICTED_USERNAME) != null) {
       timeIt(
           "syncAnonymous",
@@ -241,7 +268,8 @@ public class UserRolesSyncer {
             log.info("Synced anonymous user role.");
           });
     }
-
+    StopWatch watch1 = new StopWatch("updateUserPermissions.extUsers");
+    watch1.start();
     List<ExternalUser> extUsers =
         permissionsById.values().stream()
             .map(
@@ -253,7 +281,8 @@ public class UserRolesSyncer {
                                 .filter(role -> role.getSource() == Role.Source.EXTERNAL)
                                 .collect(Collectors.toList())))
             .collect(Collectors.toList());
-
+    watch1.stop();
+    log.info("*** {} or {}s", watch1.shortSummary(), watch1.getTotalTimeSeconds());
     if (extUsers.isEmpty()) {
       log.info("Found no non-anonymous user roles to sync.");
       return 0;
@@ -268,6 +297,8 @@ public class UserRolesSyncer {
               return values.size();
             });
     log.info("Synced {} non-anonymous user roles.", count);
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
     return count;
   }
 

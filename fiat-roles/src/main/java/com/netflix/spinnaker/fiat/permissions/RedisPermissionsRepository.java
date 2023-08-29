@@ -40,8 +40,13 @@ import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import net.jpountz.lz4.*;
-import redis.clients.jedis.*;
+import net.jpountz.lz4.LZ4CompressorWithLength;
+import net.jpountz.lz4.LZ4DecompressorWithLength;
+import net.jpountz.lz4.LZ4Factory;
+import org.springframework.util.StopWatch;
+import redis.clients.jedis.Response;
+import redis.clients.jedis.ScanParams;
+import redis.clients.jedis.ScanResult;
 import redis.clients.jedis.commands.BinaryJedisCommands;
 import redis.clients.jedis.util.SafeEncoder;
 
@@ -283,6 +288,8 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
   @Override
   public void putAllById(Map<String, UserPermission> permissions) {
+    StopWatch watch = new StopWatch("putAllById.method");
+    watch.start();
     if (permissions == null || permissions.values() == null) {
       return;
     }
@@ -290,6 +297,8 @@ public class RedisPermissionsRepository implements PermissionsRepository {
     for (UserPermission permission : permissions.values()) {
       put(permission);
     }
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
   }
 
   @Override
