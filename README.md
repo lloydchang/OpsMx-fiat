@@ -77,3 +77,6 @@ ae6cb3cc2759532d9eb9b08f9e2c2c177d9bca14 | sanopsmx | Added logs to find which a
 
 
 9408e01c7dd8e40ef6bcf898e6f5d09f8051e81e | Sanjeev Thatiparthi | Version 1.16.0 1.26.6 (#10) | 2023-08-29 
+
+
+15e7664e2016b21dfac806f9772bcce1cc0a9fcd | Yugandharkumar | Update Dockerfile-fips | 2023-08-30 
