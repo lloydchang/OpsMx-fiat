@@ -157,6 +157,8 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
 
   @Override
   public Map<String, UserPermission> resolve(@NonNull Collection<ExternalUser> users) {
+    StopWatch watch = new StopWatch("resolve.method");
+    watch.start();
     Map<String, Collection<Role>> allServiceAccountRoles = getServiceAccountRoles();
 
     Collection<ExternalUser> serviceAccounts =
@@ -181,17 +183,27 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
     Map<String, UserPermission> resolvedResources = resolveResources(userToRoles);
     long elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000;
     log.info("*** {}s to create {} UserPermission objects", elapsedSeconds, userToRoles.size());
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
     return resolvedResources;
   }
 
   private Map<String, Collection<Role>> getServiceAccountRoles() {
-    return serviceAccountProvider.getAll().stream()
-        .map(ServiceAccount::toUserPermission)
-        .collect(Collectors.toMap(UserPermission::getId, UserPermission::getRoles));
+    StopWatch watch = new StopWatch("getServiceAccountRoles.method");
+    watch.start();
+    Map<String, Collection<Role>> serviceAccountRoles =
+        serviceAccountProvider.getAll().stream()
+            .map(ServiceAccount::toUserPermission)
+            .collect(Collectors.toMap(UserPermission::getId, UserPermission::getRoles));
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+    return serviceAccountRoles;
   }
 
   private Map<String, Collection<Role>> getAndMergeUserRoles(
       @NonNull Collection<ExternalUser> users) {
+    StopWatch watch = new StopWatch("getAndMergeUserRoles.method");
+    watch.start();
     Map<String, Collection<Role>> userToRoles = userRolesProvider.multiLoadRoles(users);
 
     users.forEach(
@@ -209,6 +221,8 @@ public class DefaultPermissionsResolver implements PermissionsResolver {
         log.debug("Exception writing roles", e);
       }
     }
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
     return userToRoles;
   }
 

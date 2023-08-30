@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import net.jpountz.lz4.*;
+import org.springframework.util.StopWatch;
 import redis.clients.jedis.*;
 import redis.clients.jedis.commands.BinaryJedisCommands;
 import redis.clients.jedis.util.SafeEncoder;
@@ -298,6 +299,8 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
   @Override
   public void putAllById(Map<String, UserPermission> permissions) {
+    StopWatch watch = new StopWatch("putAllById.method");
+    watch.start();
     if (permissions == null || permissions.values() == null) {
       return;
     }
@@ -305,6 +308,8 @@ public class RedisPermissionsRepository implements PermissionsRepository {
     for (UserPermission permission : permissions.values()) {
       put(permission);
     }
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
   }
 
   @Override
@@ -407,14 +412,21 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
   @Override
   public Map<String, Set<Role>> getAllById() {
+    StopWatch watch = new StopWatch("getAllById.method");
+    watch.start();
     Set<String> allUsers =
         scanSet(allUsersKey).stream().map(String::toLowerCase).collect(Collectors.toSet());
 
-    return getRolesOf(allUsers);
+    Map<String, Set<Role>> roleMap = getRolesOf(allUsers);
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+    return roleMap;
   }
 
   @Override
   public Map<String, Set<Role>> getAllByRoles(List<String> anyRoles) {
+    StopWatch watch = new StopWatch("getAllByRoles.method");
+    watch.start();
     if (anyRoles == null) {
       return getAllById();
     } else if (anyRoles.isEmpty()) {
@@ -442,7 +454,10 @@ public class RedisPermissionsRepository implements PermissionsRepository {
 
     uniqueUsernames.add(UNRESTRICTED);
 
-    return getRolesOf(uniqueUsernames);
+    Map<String, Set<Role>> roleMap = getRolesOf(uniqueUsernames);
+    watch.stop();
+    log.info("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+    return roleMap;
   }
 
   @Override
