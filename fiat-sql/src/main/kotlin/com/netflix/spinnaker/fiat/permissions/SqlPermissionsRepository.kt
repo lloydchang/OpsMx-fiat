@@ -36,6 +36,7 @@ import io.github.resilience4j.retry.RetryConfig
 import io.vavr.control.Try
 import kotlinx.coroutines.*
 import org.jooq.*
+import org.jooq.conf.ParamType
 import org.jooq.exception.DataAccessException
 import org.jooq.exception.SQLDialectNotSupportedException
 import org.jooq.impl.DSL.field
@@ -96,7 +97,7 @@ class SqlPermissionsRepository(
 
         if (coroutineContext.useAsync(permissions.size, this::useAsync)) {
             permissions.values.chunked(
-                dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.max-query-concurrency", 4)
+                dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.max-query-concurrency", 15)
             ).forEach { chunk ->
                 val scope = SqlCoroutineScope(coroutineContext)
 
@@ -239,6 +240,7 @@ class SqlPermissionsRepository(
         }
 
         withRetry(RetryCategory.WRITE) {
+            log.info("putUserPermission sql {} ", insert.getSQL(ParamType.INLINED))
             insert.execute()
         }
 
@@ -246,7 +248,7 @@ class SqlPermissionsRepository(
     }
 
     private fun putUserPermissions(id: String, resources: Set<Resource>) {
-        val writeBatchSize = dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.write-batch-size", 100)
+        val writeBatchSize = dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.write-batch-size", 500)
 
         val existingPermissions = getUserPermissionsRecords(id)
 
@@ -283,6 +285,7 @@ class SqlPermissionsRepository(
             }
 
             withRetry(RetryCategory.WRITE) {
+                log.info("putUserPermissions sql {} ", insert.getSQL(ParamType.INLINED))
                 insert.execute()
             }
         }
@@ -369,7 +372,7 @@ class SqlPermissionsRepository(
             dynamicConfigService.getConfig(
                 Int::class.java,
                 "permissions-repository.sql.write-batch-size",
-                100
+                500
             )
         ) { chunk ->
             try {
@@ -403,6 +406,7 @@ class SqlPermissionsRepository(
                 }
 
                 withRetry(RetryCategory.WRITE) {
+                    log.info("putResources sql {} ", insert.getSQL(ParamType.INLINED))
                     insert.execute()
                 }
             } catch (e: DataAccessException) {
@@ -564,13 +568,13 @@ class SqlPermissionsRepository(
 
     @ExperimentalContracts
     private fun useAsync(items: Int): Boolean {
-        return dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.max-query-concurrency", 4) > 1 &&
-            items > dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.read-batch-size", 500) * 2
+        return dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.max-query-concurrency", 15) > 1 &&
+            items > dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.read-batch-size", 1500) * 2
     }
 
     @ExperimentalContracts
     private fun asyncEnabled(): Boolean {
-        return dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.max-query-concurrency", 4) > 1
+        return dynamicConfigService.getConfig(Int::class.java, "permissions-repository.sql.max-query-concurrency", 15) > 1
     }
 }
 

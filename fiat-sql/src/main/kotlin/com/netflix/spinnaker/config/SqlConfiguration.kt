@@ -65,7 +65,7 @@ class SqlConfiguration {
         sqlProperties: SqlProperties,
         resources: List<Resource>,
         dynamicConfigService: DynamicConfigService,
-        @Value("\${permissions-repository.sql.async-pool-size:0}") poolSize: Int
+        @Value("\${permissions-repository.sql.async-pool-size:10}") poolSize: Int
     ): PermissionsRepository {
 
         /**
