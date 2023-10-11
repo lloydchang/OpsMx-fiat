@@ -83,3 +83,6 @@ $${\color{lightblue} Recent \space commits:}$$
 
 
 66b73bd5634f58caa306925f919db132b33fa34e | sanopsmx | Increased the sql properties to improve the performance of fiat-sql. | 2023-10-11 
+
+
+18a6caa3141ab5df53d069cce0985f0945e84c1d | Sanjeev Thatiparthi | Increased the sql properties to improve the performance of fiat-sql. (#12) | 2023-10-11 
