@@ -92,3 +92,6 @@ $${\color{lightblue} Recent \space commits:}$$
 
 
 674c0213b2ed6286585879a2aea1571052373a88 | sanopsmx | Add rest api only for syncing unrestricted user. | 2023-10-17 
+
+
+7fb24884769a7e35717b34e39201c072658211f3 | Sanjeev Thatiparthi | Add rest api only for syncing unrestricted user. (#13) | 2023-10-19 
