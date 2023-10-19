@@ -73,6 +73,14 @@ public interface FiatService {
   long sync();
 
   /**
+   * Use to update only un restricted user.
+   *
+   * @return The number of anonymous users synced.
+   */
+  @POST("/roles/syncOnlyUnrestrictedUser")
+  long syncOnlyUnrestrictedUser();
+
+  /**
    * Use to update a subset of users. An empty list will update the anonymous/unrestricted user.
    *
    * @param roles Users with any role listed should be updated.

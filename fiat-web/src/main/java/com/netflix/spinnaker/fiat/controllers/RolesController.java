@@ -118,6 +118,23 @@ public class RolesController {
     return count;
   }
 
+  @RequestMapping(value = "/syncOnlyUnrestrictedUser", method = RequestMethod.POST)
+  public long syncOnlyUnrestrictedUser(HttpServletResponse response) throws IOException {
+    StopWatch watch = new StopWatch("RolesController.syncOnlyUnrestrictedUser");
+    watch.start();
+    log.trace("Role syncOnlyUnrestrictedUser invoked by web request for roles:");
+    long count = syncer.syncOnlyUnrestrictedUserAndReturn();
+    if (count == 0) {
+      log.info("No users found with specified roles");
+      response.sendError(
+          HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+          "Error occurred syncing permissions. See Fiat Logs.");
+    }
+    watch.stop();
+    log.trace("*** {} or {}s", watch.shortSummary(), watch.getTotalTimeSeconds());
+    return count;
+  }
+
   @RequestMapping(value = "/sync/serviceAccount/{serviceAccountId:.+}", method = RequestMethod.POST)
   public long syncServiceAccount(
       @PathVariable String serviceAccountId, @RequestBody List<String> specificRoles) {

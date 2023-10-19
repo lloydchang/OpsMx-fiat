@@ -86,3 +86,9 @@ $${\color{lightblue} Recent \space commits:}$$
 
 
 18a6caa3141ab5df53d069cce0985f0945e84c1d | Sanjeev Thatiparthi | Increased the sql properties to improve the performance of fiat-sql. (#12) | 2023-10-11 
+
+
+0e7daf4adab0d49ca3034423f339cbd751299e20 | sanopsmx | Add rest api only for syncing unrestricted user. | 2023-10-16 
+
+
+674c0213b2ed6286585879a2aea1571052373a88 | sanopsmx | Add rest api only for syncing unrestricted user. | 2023-10-17 
