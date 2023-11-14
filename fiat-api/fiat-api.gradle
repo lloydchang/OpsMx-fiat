@@ -39,3 +39,32 @@ dependencies {
 
   testImplementation "org.slf4j:slf4j-api"
 }
+publishing {
+  publications {
+    maven(MavenPublication) {
+      groupId = 'io.spinnaker.fiat'
+      artifactId = 'fiat-api'
+      version = "1.37.3-SNAPSHOT"
+      from components.java
+
+      pom {
+        name = 'fiat-api'
+        description = 'A description of my library'
+      }
+    }
+  }
+
+  repositories {
+    maven {
+      /*credentials {
+        username = "admin"
+        password = "Opsmx@321!"
+      }*/
+      credentials {
+        username = "NEXUS_USERNAME"
+        password = "NEXUS_PASSWORD"
+      }
+      url = "https://nexus.opsmx.net/repository/maven-snapshots"
+    }
+  }
+}
